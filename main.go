@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,12 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type Database struct {
+	Name    string `json:"name"`
+	Surname string `json:"surname"`
+	Age     int    `json:"age"`
+}
 
 func main() {
 	router := mux.NewRouter()
@@ -61,17 +68,21 @@ func getUser_Id(w http.ResponseWriter, r *http.Request) { // Display users with 
 }
 
 func postUser(w http.ResponseWriter, r *http.Request) { // Post a user inputted on user.html
-	name := "Baha"
-	surname := "Yıldırım"
-	age := 21
+	var database Database
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&database)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Body.Close()
 	fmt.Fprintf(w, "POST request successful\n")
-	fmt.Fprintf(w, "Name = %s\n", name)
-	fmt.Fprintf(w, "Surname = %s\n", surname)
-	fmt.Fprintf(w, "Age = %d\n", age)
+	fmt.Fprintf(w, "Name = %s\n", database.Name)
+	fmt.Fprintf(w, "Surname = %s\n", database.Surname)
+	fmt.Fprintf(w, "Age = %d\n", database.Age)
 	db, _ := sql.Open("sqlite3", "./sqlite-database.db")
 	insertUserSQL := `INSERT INTO users(name, surname, age) VALUES (?, ?, ?)`
 	statement, err := db.Prepare(insertUserSQL) // Prepare statement.
-	_, err = statement.Exec(name, surname, age)
+	_, err = statement.Exec(database.Name, database.Surname, database.Age)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
